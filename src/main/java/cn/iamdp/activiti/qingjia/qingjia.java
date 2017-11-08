@@ -1,27 +1,33 @@
-package cn.iamdp.activiti;
+package cn.iamdp.activiti.qingjia;
 
+import java.io.InputStream;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.activiti.engine.ProcessEngine;
 import org.activiti.engine.ProcessEngines;
+import org.activiti.engine.RepositoryService;
 import org.activiti.engine.history.HistoricIdentityLink;
 import org.activiti.engine.repository.Deployment;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.Task;
 import org.junit.Test;
 
-public class HelloWorld {	
+public class qingjia {	
 	ProcessEngine processEngine=ProcessEngines.getDefaultProcessEngine();
 	@Test
 	public void deploymentProcess(){
+		InputStream bpmnStream=this.getClass().getResourceAsStream("qingjiaprocess.bpmn");
+		InputStream pngStream=this.getClass().getResourceAsStream("qingjiaprocess.png");
 		Deployment deployment=processEngine.getRepositoryService()//得到流程定义和部署对象相关的service
 						.createDeployment()//创建部署对象
-						.name("hello部署")
-						.addClasspathResource("diagrams/helloworld.bpmn")//从classpath中加载，一次只能加载一个
-						.addClasspathResource("diagrams/helloworld.png")
+						.name("请假流程部署")
+						.addInputStream("qingjiaprocess.bpmn", bpmnStream)
+						.addInputStream("qingjiaprocess.png", pngStream)
 						.deploy();//部署完成
 		System.out.println(deployment.getId());
-		System.out.println(deployment.getCategory());
+		System.out.println(deployment.getName());
 	}
 	
 	/**
@@ -29,7 +35,7 @@ public class HelloWorld {
 	 */
 	@Test
 	public void startProcessInstance(){
-		String processKey="hello";
+		String processKey="qingjia";
 		ProcessInstance processInstance=processEngine.getRuntimeService()//与正在执行的流程实例和执行对象相关的service
 				//通过流程定义的key来启动流程，对应helloworld.bpmn文件中的流程key属性，通过key启动是按照最新的流程进行启动
 					.startProcessInstanceByKey(processKey);
@@ -66,7 +72,14 @@ public class HelloWorld {
 	 */
 	@Test
 	public void compelteMyTask(){
-		processEngine.getTaskService().complete("7502");//通过任务id
+		
+		//完成任务后设置变量，通过设置变量来决定下一步执行哪一步。变量name和value定义要和流程图中flow中condition一样
+		//#{message=='三天之内'}
+		//#{message=='大于三天'}
+		Map<String,Object> variables=new HashMap<String,Object>();
+//		variables.put("message", "三天之内");
+		variables.put("message", "大于三天");
+		processEngine.getTaskService().complete("30003", variables);//通过任务id
 		System.out.println("完成任务");
 	}
 	
@@ -79,5 +92,11 @@ public class HelloWorld {
 				System.out.println(hk.getUserId());
 			}
 		}
+	}
+	
+	@Test
+	public void deleteProcess(){
+		RepositoryService repositoryService=processEngine.getRepositoryService();
+		repositoryService.deleteDeployment("1",true);
 	}
 }
